@@ -7,11 +7,19 @@ import hashlib
 from typing import Optional
 
 
-with open("building_data.json", "r") as f:
+with open("building_data.json", "r", encoding="utf-8") as f:
     buildingDataDic = json.loads(f.read())
 
 if not os.path.exists("output"):
     os.mkdir("output")
+
+
+def getAllThemeIDs() -> Optional[list[str]]:
+    if "customData" in buildingDataDic and "themes" in buildingDataDic["customData"]:
+        return buildingDataDic["customData"]["themes"]
+    else:
+        print("Error: 数据文件格式不合预期")
+        return None
 
 
 def filterFurnitureWithTheme(themeID: str) -> Optional[list[str]]:
@@ -31,7 +39,7 @@ def filterFurnitureWithTheme(themeID: str) -> Optional[list[str]]:
         print("Error: 数据文件格式不合预期")
 
 
-def unionFurniture(themeName: str, resourceDataDirPath: str, furnitureIDArray: list[str], outputDirPath: str):
+def unionFurniture(themeShortID: str, resourceDataDirPath: str, furnitureIDArray: list[str], outputDirPath: str):
 
     existFileDic = {}
     foundFurnitureIDArray = []
@@ -44,7 +52,7 @@ def unionFurniture(themeName: str, resourceDataDirPath: str, furnitureIDArray: l
         theMd5 = hashlib.md5(content).hexdigest().upper()
         if name in existFileDic:
             if theMd5 != existFileDic[name]:
-                print("去重失败！出现了同名但不同内容的文件！")
+                print(f"Warning: 去重失败！出现了同名但不同内容的文件（{name}）")
         else:
             with open(os.path.join(outputDirPath, name), "wb") as f:
                 f.write(content)
@@ -64,7 +72,7 @@ def unionFurniture(themeName: str, resourceDataDirPath: str, furnitureIDArray: l
                 searchPath(os.path.join(path, item))
         else:
             # 如果是文件，则如果文件名包含主题简名并且是png，则copy走
-            if themeName in path and path.endswith("png"):
+            if themeShortID in path and path.endswith("png"):
                 copyFileToOutputDir(path)
                 foundSinglePngFileArray.append(path)
 
@@ -72,17 +80,33 @@ def unionFurniture(themeName: str, resourceDataDirPath: str, furnitureIDArray: l
     print(f"找到含家具ID的文件夹{len(foundFurnitureIDArray)}个，找个含主题简名的png文件{len(foundSinglePngFileArray)}个。")
 
 
-if __name__ == "__main__":
-    themeID = input("输入主题ID：")
-    themeName = input("输入主题简名（例如 arcadeHall）：")
-    resourceDataDirPath = input("输入资源所在文件夹路径：")
-    if len(themeID) > 0 and len(themeName) > 0 and len(resourceDataDirPath) > 0:
+def runWithThemeID(themeID: str, resourceDataDirPath: str):
+    print("=====================================")
+    print(f"开始处理 {themeID}")
+    if len(themeID) > 10 and len(resourceDataDirPath) > 0:
+        themeShortID = themeID[10:]
         furnitureIDArray = filterFurnitureWithTheme(themeID)
         if furnitureIDArray is not None:
             print(f"The length of furnitureIDArray is {len(furnitureIDArray)}.")
-            outputDirPath = os.path.join("output", themeName)
+            outputDirPath = os.path.join("output", themeShortID)
             if not os.path.exists(outputDirPath):
                 os.mkdir(outputDirPath)
-            unionFurniture(themeName, resourceDataDirPath, furnitureIDArray, outputDirPath)
-            print("Done")
+            unionFurniture(themeShortID, resourceDataDirPath, furnitureIDArray, outputDirPath)
+            print(f"{themeID} Done")
+    else:
+        print(f"Error: themeID（{themeID}）或resourceDataDirPath（{resourceDataDirPath}）非法")
+    print("\n")
+
+
+if __name__ == "__main__":
+    themeID = input("输入主题ID（输入\"all\"以处理所有主题）：")
+    resourceDataDirPath = input("输入资源所在文件夹路径：")
+    if themeID == "all":
+        allThemeIDs = getAllThemeIDs()
+        if allThemeIDs is not None:
+            for item in allThemeIDs:
+                runWithThemeID(item, resourceDataDirPath)
+    else:
+        runWithThemeID(themeID, resourceDataDirPath)
+
 
