@@ -71,11 +71,12 @@ def unionFurniture(themeShortID: str, resourceDataDirPath: str, furnitureIDArray
                 existFileDic[name] = (theMd5, theSize)
 
     def searchPath(path: str):
+        name = path.split(os.path.sep)[-1]
         if os.path.isdir(path):
             # 如果是文件夹，并且文件夹名含有主题ID，就把里面的文件都copy走
             fileList = os.listdir(path)
             for furnitureID in furnitureIDArray:
-                if furnitureID in path:
+                if furnitureID in name:
                     for item in fileList:
                         copyFileToOutputDir(os.path.join(path, item))
                     foundFurnitureIDArray.append(furnitureID)
@@ -84,12 +85,12 @@ def unionFurniture(themeShortID: str, resourceDataDirPath: str, furnitureIDArray
                 searchPath(os.path.join(path, item))
         else:
             # 如果是文件，则如果文件名包含主题简名并且是png，则copy走
-            if themeShortID in path and path.endswith("png"):
+            if name.startswith(f"TX_{themeShortID}") and name.endswith("png"):
                 copyFileToOutputDir(path)
                 foundSinglePngFileArray.append(path)
 
     searchPath(resourceDataDirPath)
-    print(f"找到含家具ID的文件夹{len(foundFurnitureIDArray)}个，找个含主题简名的png文件{len(foundSinglePngFileArray)}个。")
+    print(f"找到含家具ID的文件夹{len(foundFurnitureIDArray)}个，找到含主题简名的png文件{len(foundSinglePngFileArray)}个。")
 
 
 def runWithThemeID(themeID: str, resourceDataDirPath: str):
