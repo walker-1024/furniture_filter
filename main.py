@@ -41,22 +41,34 @@ def filterFurnitureWithTheme(themeID: str) -> Optional[list[str]]:
 
 def unionFurniture(themeShortID: str, resourceDataDirPath: str, furnitureIDArray: list[str], outputDirPath: str):
 
+    # key 为文件名，value 为 (文件md5, 文件大小)
     existFileDic = {}
     foundFurnitureIDArray = []
     foundSinglePngFileArray = []
 
     def copyFileToOutputDir(filePath: str):
-        name = filePath.split(os.path.sep)[-1]
-        with open(filePath, "rb") as f:
-            content = f.read()
-        theMd5 = hashlib.md5(content).hexdigest().upper()
-        if name in existFileDic:
-            if theMd5 != existFileDic[name]:
-                print(f"Warning: 去重失败！出现了同名但不同内容的文件（{name}）")
+        if os.path.isdir(filePath):
+            fileList = os.listdir(filePath)
+            for item in fileList:
+                copyFileToOutputDir(os.path.join(filePath, item))
         else:
-            with open(os.path.join(outputDirPath, name), "wb") as f:
-                f.write(content)
-            existFileDic[name] = theMd5
+            name = filePath.split(os.path.sep)[-1]
+            with open(filePath, "rb") as f:
+                content = f.read()
+            theMd5 = hashlib.md5(content).hexdigest().upper()
+            theSize = os.path.getsize(filePath)
+            if name in existFileDic:
+                beforeMd5, beforeSize = existFileDic[name]
+                if theMd5 != beforeMd5:
+                    if theSize > beforeSize:
+                        with open(os.path.join(outputDirPath, name), "wb") as f:
+                            f.write(content)
+                        existFileDic[name] = (theMd5, theSize)
+                    print(f"Warning: 去重失败！出现了同名但不同内容的文件（{name}），已保留较大的文件")
+            else:
+                with open(os.path.join(outputDirPath, name), "wb") as f:
+                    f.write(content)
+                existFileDic[name] = (theMd5, theSize)
 
     def searchPath(path: str):
         if os.path.isdir(path):
