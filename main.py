@@ -5,21 +5,28 @@ import json
 import os
 import hashlib
 from typing import Optional
+import threading
+import PySimpleGUI as sg
 
 
 with open("building_data.json", "r", encoding="utf-8") as f:
     buildingDataDic = json.loads(f.read())
 
-if not os.path.exists("output"):
-    os.mkdir("output")
+outputBaseDirPath = "output"
+if not os.path.exists(outputBaseDirPath):
+    os.mkdir(outputBaseDirPath)
+
+buildingDirPath = os.path.join(outputBaseDirPath, "building")
+if not os.path.exists(buildingDirPath):
+    os.mkdir(buildingDirPath)
 
 
-def getAllThemeIDs() -> Optional[list[str]]:
+def getAllThemeIDs() -> list[str]:
     if "customData" in buildingDataDic and "themes" in buildingDataDic["customData"]:
-        return buildingDataDic["customData"]["themes"]
+        return list(buildingDataDic["customData"]["themes"].keys())
     else:
         print("Error: 数据文件格式不合预期")
-        return None
+        return []
 
 
 def filterFurnitureWithTheme(themeID: str) -> Optional[list[str]]:
@@ -101,7 +108,7 @@ def runWithThemeID(themeID: str, resourceDataDirPath: str):
         furnitureIDArray = filterFurnitureWithTheme(themeID)
         if furnitureIDArray is not None:
             print(f"The length of furnitureIDArray is {len(furnitureIDArray)}.")
-            outputDirPath = os.path.join("output", themeShortID)
+            outputDirPath = os.path.join(buildingDirPath, themeID)
             if not os.path.exists(outputDirPath):
                 os.mkdir(outputDirPath)
             unionFurniture(themeShortID, resourceDataDirPath, furnitureIDArray, outputDirPath)
@@ -111,15 +118,39 @@ def runWithThemeID(themeID: str, resourceDataDirPath: str):
     print("\n")
 
 
-if __name__ == "__main__":
-    themeID = input("输入主题ID（输入\"all\"以处理所有主题）：")
-    resourceDataDirPath = input("输入资源所在文件夹路径：")
-    if themeID == "all":
-        allThemeIDs = getAllThemeIDs()
-        if allThemeIDs is not None:
+def runGUI():
+    allThemeIDs = getAllThemeIDs()
+    comboList = allThemeIDs.copy()
+    comboList.insert(0, "all")
+
+    layout = [
+        [sg.Text("资源所在文件夹路径："), sg.InputText(key="resourceDataDirPath"), sg.FolderBrowse("选择文件夹")],
+        [sg.Text("选择主题（选择\"all\"以处理所有主题）："), sg.Combo(comboList, default_value="all", key="themeID")],
+        [sg.Button("执行")],
+        [sg.Output(size=(100, 20))]
+    ]
+
+    window = sg.Window("furniture_filter", layout)
+
+    def innerRun(themeID: str, resourceDataDirPath: str):
+        if themeID == "all":
             for item in allThemeIDs:
                 runWithThemeID(item, resourceDataDirPath)
-    else:
-        runWithThemeID(themeID, resourceDataDirPath)
+        else:
+            runWithThemeID(themeID, resourceDataDirPath)
 
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED:
+            break
+        elif event == "执行":
+            resourceDataDirPath = values.get("resourceDataDirPath")
+            themeID = values.get("themeID")
+            threading.Thread(target=innerRun, args=(themeID, resourceDataDirPath)).start()
+
+    window.close()
+
+
+if __name__ == "__main__":
+    runGUI()
 
