@@ -22,6 +22,10 @@ furnitureIconDirPath = os.path.join(outputBaseDirPath, "furniture_icon")
 if not os.path.exists(furnitureIconDirPath):
     os.mkdir(furnitureIconDirPath)
 
+themeIconDirPath = os.path.join(outputBaseDirPath, "theme_icon")
+if not os.path.exists(themeIconDirPath):
+    os.mkdir(themeIconDirPath)
+
 
 def getAllThemeIDs() -> list[str]:
     if "customData" in buildingDataDic and "themes" in buildingDataDic["customData"]:
@@ -176,6 +180,26 @@ def unionFurnitureIcon(themeID: str, resourceDataDirPath: str, furnitureIDArray:
     print(f"找到家具图标{len(foundFurnitureIconIDArray)}个。")
 
 
+def unionThemeIcon(themeID: str, resourceDataDirPath: str):
+    def searchPath(path: str):
+        if not os.path.exists(path):
+            return
+        if os.path.isdir(path):
+            fileList = os.listdir(path)
+            for item in fileList:
+                searchPath(os.path.join(path, item))
+        else:
+            _, fileName = os.path.split(path)
+            if themeID + ".png" == fileName:
+                # 这里就不用搞什么去重了吧
+                with open(path, "rb") as f:
+                    content = f.read()
+                with open(os.path.join(themeIconDirPath, fileName), "wb") as f:
+                    f.write(content)
+
+    searchPath(resourceDataDirPath)
+
+
 def runWithThemeID(themeID: str, resourceDataDirPath: str):
     print("=====================================")
     print(f"开始处理 {themeID}")
@@ -185,6 +209,7 @@ def runWithThemeID(themeID: str, resourceDataDirPath: str):
             print(f"The length of furnitureIDArray is {len(furnitureIDArray)}.")
             unionFurniture(themeID, resourceDataDirPath, furnitureIDArray)
             unionFurnitureIcon(themeID, resourceDataDirPath, furnitureIDArray)
+            unionThemeIcon(themeID, resourceDataDirPath)
             print(f"{themeID} Done")
     else:
         print(f"Error: themeID（{themeID}）或resourceDataDirPath（{resourceDataDirPath}）非法")
