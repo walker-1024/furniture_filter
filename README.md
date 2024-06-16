@@ -57,3 +57,11 @@ theme_icon 文件夹内存放着每个主题的图标图片。
 ![image-6](image/image-6.png)
 ![image-7](image/image-7.png)
 
+
+# 2024-06-16补充
+
+新增检索单品家具（不属于任何主题的家具）的功能，直接运行 `single.py` 即可。
+
+![image-8](image/image-8.png)
+![image-9](image/image-9.png)
+
